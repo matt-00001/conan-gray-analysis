@@ -1,0 +1,35 @@
+name: Daily Wishbone Snapshot
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # todos los días a las 12:00 UTC
+  workflow_dispatch:        # también permite correrlo manualmente
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pylast pandas python-dotenv matplotlib seaborn
+
+      - name: Run snapshot
+        env:
+          LASTFM_KEY: ${{ secrets.LASTFM_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+        run: python Conan.py
+
+      - name: Commit snapshot CSV
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add wishbone_snapshot_*.csv
+          git diff --cached --quiet || git commit -m "Auto snapshot $(date '+%Y-%m-%d')"
+          git push
