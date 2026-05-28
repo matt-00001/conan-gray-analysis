@@ -1,10 +1,6 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 import subprocess
 import sys
 subprocess.check_call([sys.executable, "-m", "pip", "install", "pylast"])
-
 import pylast
 import glob
 import pandas as pd
@@ -19,7 +15,6 @@ API_KEY = os.environ["LASTFM_KEY"]
 API_SECRET = os.environ["LASTFM_SECRET"]
 network = pylast.LastFMNetwork(api_key=API_KEY, api_secret=API_SECRET)
 
-# --- Discografía general ---
 artist = network.get_artist("Conan Gray")
 top_albums = artist.get_top_albums(limit=10)
 
@@ -44,7 +39,6 @@ for album_item in top_albums:
 df_discography = pd.DataFrame(full_data)
 print(f"Done! We have data for {len(df_discography)} songs.")
 
-# --- Álbumes oficiales ---
 official_albums = ["Kid Krow", "Superache", "Found Heaven", "Wishbone", "Wishbone Deluxe"]
 album_stats = []
 print("Fetching official album data...")
@@ -68,7 +62,6 @@ for album_name in official_albums:
 df_albums = pd.DataFrame(album_stats).sort_values(by='listeners', ascending=False)
 print(df_albums)
 
-# --- Gráfico álbumes ---
 plt.figure(figsize=(12, 8))
 sns.set_style("whitegrid")
 plot = sns.barplot(data=df_albums, x='listeners', y='album', palette='mako')
@@ -80,7 +73,6 @@ for i, v in enumerate(df_albums['listeners']):
 plt.tight_layout()
 plt.show()
 
-# --- Wishbone Deluxe tracks ---
 deluxe_tracks = {
     "Original": [
         "Actor", "This Song", "Vodka Cranberry", "Romeo", "My World",
@@ -114,7 +106,6 @@ for category, tracks in deluxe_tracks.items():
 df_wishbone = pd.DataFrame(data).sort_values(by='Listeners', ascending=False)
 print(df_wishbone[['Track', 'Listeners', 'Type']])
 
-# --- Gráfico Wishbone Deluxe general ---
 plt.figure(figsize=(12, 7))
 sns.set_style("dark")
 plot = sns.barplot(data=df_wishbone, x='Listeners', y='Track', hue='Type', dodge=False, palette='magma')
@@ -145,13 +136,38 @@ plt.title('Wishbone Deluxe: New Tracks — Volume vs Intensity', fontsize=15)
 fig.tight_layout()
 plt.show()
 
-# --- Snapshot CSV ---
 today = date.today()
 filename = f"wishbone_snapshot_{today}.csv"
 df_wishbone.to_csv(filename, index=False)
 print(f"Snapshot saved as: {filename}")
 
-# --- Historial de snapshots ---
+dfs = []
+for f in sorted(glob.glob("wishbone_snapshot_*.csv")):
+    df = pd.read_csv(f)
+    df['date'] = f.replace("wishbone_snapshot_", "").replace(".csv", "")
+    dfs.append(df)
+
+if len(dfs) > 1:
+    df_history = pd.concat(dfs)
+    df_history['date'] = pd.to_datetime(df_history['date'])
+
+    plt.figure(figsize=(14, 7))
+    sns.set_style("darkgrid")
+
+    for track in df_history['Track'].unique():
+        df_track = df_history[df_history['Track'] == track]
+        plt.plot(df_track['date'], df_track['Listeners'], marker='o', label=track)
+
+    plt.title('Wishbone Deluxe: Listener Growth Over Time', fontsize=15)
+    plt.xlabel('Date')
+    plt.ylabel('Listeners')
+    plt.xticks(rotation=45)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
+    plt.tight_layout()
+    plt.show()
+else:
+    print("Need at least 2 snapshots to show growth chart.")
+
 dfs = []
 for f in sorted(glob.glob("wishbone_snapshot_*.csv")):
     df = pd.read_csv(f)
